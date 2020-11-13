@@ -1,0 +1,46 @@
+version: '2'
+volumes:
+  influxdb-data:
+  nocherobot-data:
+services:
+  influxdb:
+    build: influxdb
+    container_name: influxdb
+    # privileged added so usb drive can be mounted.
+    privileged: true
+    volumes:
+    # take care that the mount location "/mnt/influxdb" becomes overwritten
+    # by the mount location specified in the influxdb Dockerfile.
+    - 'influxdb-data:/mnt/influxdb'   
+    ports:
+    # The API for InfluxDB is served on port 8086
+    - "8082:8082"
+    - "8086:8086"
+    # UDP Port
+    - "8089:8089"
+    restart: always
+  telegraf:
+    # Full tag list: https://hub.docker.com/r/library/telegraf/tags/
+    build : telegraf
+    pid: "host"
+    network_mode: "host"
+    privileged: true
+    labels:
+      io.resin.features.balena-socket: '1'
+    depends_on:
+    - influxdb
+    restart: always
+    environment:
+    - interval=60s
+    - flush_interval=60s
+  mqtt:
+    #image: panuwitp/mosquitto-arm
+    image: arm32v6/eclipse-mosquitto
+    ports:
+    - "1883:1883"
+  nocherobot:
+    build: nocherobot
+    container_name: nocherobot
+    volumes:
+    - nocherobot-data:/data
+    restart: always
